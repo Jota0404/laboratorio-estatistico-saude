@@ -6,7 +6,7 @@ Aplicação interativa desenvolvida em **Python** e **Streamlit** para análise 
 
 ## 🚀 Como Executar o Projeto
 
-### 1. Clona o repositório e acesse a pasta:
+### 1. Clonar o repositório e acessar a pasta:
 ```bash
-git clone <URL_DO_SEU_REPOSITORIO>
+git clone [https://github.com/Jota0404/laboratorio-estatistico-saude.git](https://github.com/Jota0404/laboratorio-estatistico-saude.git)
 cd laboratorio-estatistico-saude
