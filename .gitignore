@@ -10,9 +10,14 @@ dist/
 __pycache__/
 *.pyc
 .pytest_cache/
+.coverage
+htmlcov/
 
 # Configurações do VS Code
 .vscode/
 
-# Dados pesados / brutos (opcional, dependendo do tamanho)
-# data/raw/*.csv
+# Dados sensíveis de saúde — nunca versionar dados reais/brutos.
+# Mantemos apenas a pasta rastreada via .gitkeep; qualquer CSV real
+# deve ser adicionado localmente e nunca commitado (LGPD).
+data/raw/*.csv
+!data/raw/.gitkeep
