@@ -1,4 +1,5 @@
 import glob
+from pathlib import Path
 
 import streamlit as st
 import pandas as pd
@@ -8,284 +9,383 @@ import seaborn as sns
 from scipy import stats
 from src import minhastats
 
-# Configuração da página
 st.set_page_config(
     page_title="Laboratório Estatístico de Saúde",
     page_icon="🩺",
-    layout="wide"
+    layout="wide",
 )
 
 st.title("🩺 Laboratório Estatístico Interativo — Análise de Saúde")
 st.markdown("---")
 
 
-# Carregamento dos dados
 @st.cache_data
 def load_data(data_dir: str = "data/raw"):
-    """Carrega o primeiro arquivo CSV encontrado em `data_dir`.
-
-    Args:
-        data_dir: Diretório onde os arquivos CSV de dados estão
-            armazenados.
-
-    Returns:
-        Um DataFrame com os dados carregados, ou `None` se nenhum
-        arquivo CSV válido for encontrado.
-    """
+    """Carrega o primeiro CSV local disponível."""
     csv_files = sorted(glob.glob(f"{data_dir}/*.csv"))
     if not csv_files:
-        st.error(f"Nenhum arquivo CSV encontrado em `{data_dir}/`.")
         return None
-
     path = csv_files[0]
     try:
         return pd.read_csv(path)
-    except (pd.errors.ParserError, UnicodeDecodeError, OSError) as e:
-        st.error(f"Erro ao ler o arquivo '{path}': {e}")
+    except (pd.errors.ParserError, UnicodeDecodeError, OSError) as exc:
+        st.error(f"Erro ao ler o arquivo '{path}': {exc}")
         return None
 
 
 df = load_data()
 
-if df is not None:
-    # Abas para navegação entre os Módulos do Trabalho
-    tab0, tab2, tab3, tab4, tab5 = st.tabs([
-        "📦 Módulo 0: Dados",
-        "📊 Módulo 2: Descritiva Interativa",
-        "🎲 Módulo 3: Monte Carlo (LGN & TCL)",
-        "📐 Módulo 4: Distribuições Teóricas",
-        "📈 Módulo 5: Correlação & Regressão"
-    ])
+if df is None:
+    st.error("Nenhum CSV foi encontrado em `data/raw/`.")
+    st.info(
+        "Baixe o dataset público indicado no README e salve o CSV em "
+        "`data/raw/`. O projeto não versiona dados brutos automaticamente."
+    )
+    st.stop()
 
-    # ----------------------------------------------------
-    # MÓDULO 0: DADOS REAIS
-    # ----------------------------------------------------
-    with tab0:
-        st.header("📦 Visão Geral dos Dados de Saúde")
-        st.dataframe(df.head(10), use_container_width=True)
-        col_m1, col_m2 = st.columns(2)
-        col_m1.metric("Total de Registros (Linhas)", len(df))
-        col_m2.metric("Total de Colunas", len(df.columns))
+if df.empty:
+    st.error("O dataset está vazio.")
+    st.stop()
 
-    # Identificação automática de variáveis
-    num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    cat_cols = df.select_dtypes(exclude=[np.number]).columns.tolist()
+num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+cat_cols = df.select_dtypes(exclude=[np.number]).columns.tolist()
 
-    # ----------------------------------------------------
-    # MÓDULO 2: ESTATÍSTICA DESCRITIVA INTERATIVA
-    # ----------------------------------------------------
-    with tab2:
-        st.header("📊 Análise Descritiva Univariada")
-        var_sel = st.selectbox("Selecione uma Variável Numérica:", num_cols, key="mod2_var")
+if len(num_cols) == 0:
+    st.error("O dataset precisa possuir pelo menos uma variável numérica.")
+    st.stop()
 
-        data_clean = df[var_sel].dropna().tolist()
+# Navegação entre os módulos da atividade.
+tab0, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "📦 Módulo 0: Dados",
+    "📊 Módulo 2: Descritiva Interativa",
+    "🎲 Módulo 3: Monte Carlo (LGN & TCL)",
+    "📐 Módulo 4: Distribuições Teóricas",
+    "📈 Módulo 5: Correlação & Regressão",
+    "🔎 Módulo 6: Descobertas",
+])
+
+with tab0:
+    st.header("📦 Visão Geral dos Dados de Saúde")
+    st.dataframe(df.head(10), use_container_width=True)
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("Total de Registros", len(df))
+    col_m2.metric("Variáveis Numéricas", len(num_cols))
+    col_m3.metric("Variáveis Categóricas", len(cat_cols))
+
+    st.subheader("Tipos de variáveis")
+    type_table = pd.DataFrame({
+        "Variável": df.columns,
+        "Tipo": [str(df[column].dtype) for column in df.columns],
+        "Nulos": [int(df[column].isna().sum()) for column in df.columns],
+    })
+    st.dataframe(type_table, use_container_width=True, hide_index=True)
+
+with tab2:
+    st.header("📊 Análise Descritiva Interativa")
+    st.caption("As estatísticas principais são calculadas pelo núcleo próprio em `src/minhastats.py`.")
+
+    variable_type = st.radio("Tipo de variável", ["Numérica", "Categórica"], horizontal=True)
+
+    if variable_type == "Numérica":
+        var_sel = st.selectbox("Selecione uma variável numérica:", num_cols, key="mod2_var")
+        data_clean = df[var_sel].dropna().astype(float).tolist()
 
         if len(data_clean) < 2:
-            st.warning(
-                f"A variável **{var_sel}** possui menos de 2 valores válidos "
-                "e não pode ser analisada estatisticamente."
-            )
+            st.warning(f"A variável **{var_sel}** possui menos de 2 valores válidos.")
             st.stop()
 
-        # Cálculos usando O NÚCLEO PRÓPRIO!
         try:
             mean_val = minhastats.mean(data_clean)
             med_val = minhastats.median(data_clean)
-            std_val = minhastats.std_dev(data_clean, ddof=1)
+            modes = minhastats.mode(data_clean)
+            amp_val = minhastats.amplitude(data_clean)
+            var_pop = minhastats.variance(data_clean, ddof=0)
+            var_sample = minhastats.variance(data_clean, ddof=1)
+            std_pop = minhastats.std_dev(data_clean, ddof=0)
+            std_sample = minhastats.std_dev(data_clean, ddof=1)
             q1_val = minhastats.quantile(data_clean, 0.25)
+            q2_val = minhastats.quantile(data_clean, 0.50)
             q3_val = minhastats.quantile(data_clean, 0.75)
-        except ValueError as e:
-            st.error(f"Não foi possível calcular as estatísticas de **{var_sel}**: {e}")
+            p90_val = minhastats.percentile(data_clean, 90)
+            cv_val = minhastats.coefficient_of_variation(data_clean)
+        except ValueError as exc:
+            st.error(f"Não foi possível calcular as estatísticas: {exc}")
             st.stop()
 
         iqr_val = q3_val - q1_val
-
-        # Detecção de Outliers via IQR
         lower_bound = q1_val - 1.5 * iqr_val
         upper_bound = q3_val + 1.5 * iqr_val
         outliers = [x for x in data_clean if x < lower_bound or x > upper_bound]
 
-        # Métricas exibidas na tela
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Média (Própria)", f"{mean_val:.2f}")
-        c2.metric("Mediana (Própria)", f"{med_val:.2f}")
-        c3.metric("Desvio Padrão (Próprio)", f"{std_val:.2f}")
-        c4.metric("Outliers (Regra IQR)", len(outliers))
+        c1.metric("Média", f"{mean_val:.2f}")
+        c2.metric("Mediana", f"{med_val:.2f}")
+        c3.metric("Moda", ", ".join(f"{value:.2f}" for value in modes[:3]))
+        c4.metric("Outliers (IQR)", len(outliers))
 
-        # Gráficos
-        fig, ax = plt.subplots(1, 2, figsize=(12, 4))
-        sns.histplot(data_clean, kde=True, ax=ax[0], color="skyblue")
-        ax[0].set_title(f"Histograma & Densidade de {var_sel}")
+        c5, c6, c7, c8 = st.columns(4)
+        c5.metric("Amplitude", f"{amp_val:.2f}")
+        c6.metric("Variância amostral", f"{var_sample:.2f}")
+        c7.metric("Desvio padrão amostral", f"{std_sample:.2f}")
+        c8.metric("CV", f"{cv_val:.2f}%")
 
-        sns.boxplot(x=data_clean, ax=ax[1], color="lightgreen")
-        ax[1].set_title(f"Boxplot de {var_sel}")
+        st.subheader("Quartis e percentil")
+        quartile_table = pd.DataFrame({
+            "Medida": ["Q1 (25%)", "Mediana (50%)", "Q3 (75%)", "P90", "IQR"],
+            "Valor": [q1_val, q2_val, q3_val, p90_val, iqr_val],
+        })
+        st.dataframe(quartile_table, use_container_width=True, hide_index=True)
+
+        st.subheader("Tabela de frequência")
+        try:
+            bins = min(10, max(2, int(np.sqrt(len(data_clean)))))
+            frequency = pd.cut(data_clean, bins=bins, include_lowest=True).value_counts().sort_index()
+            frequency_table = pd.DataFrame({
+                "Classe": frequency.index.astype(str),
+                "Frequência": frequency.values,
+            })
+            frequency_table["Frequência relativa (%)"] = (
+                frequency_table["Frequência"] / len(data_clean) * 100
+            ).round(2)
+            st.dataframe(frequency_table, use_container_width=True, hide_index=True)
+        except ValueError as exc:
+            st.warning(f"Não foi possível construir a tabela de frequência: {exc}")
+
+        fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+        sns.histplot(data_clean, kde=True, ax=axes[0])
+        axes[0].set_title(f"Histograma — {var_sel}")
+        sns.boxplot(x=data_clean, ax=axes[1])
+        axes[1].set_title(f"Boxplot — {var_sel}")
         st.pyplot(fig)
         plt.close(fig)
 
-        # Interpretação Automática de Assimetria
         st.subheader("💡 Interpretação Automática")
-        if abs(mean_val - med_val) < 0.05 * std_val:
-            st.info("A distribuição aparenta ser aproximadamente **Simétrica** (Média próximo da Mediana).")
+        if std_sample == 0:
+            st.info("A variável é constante: não há dispersão observada.")
+        elif abs(mean_val - med_val) < 0.05 * std_sample:
+            st.info("A distribuição aparenta ser aproximadamente simétrica, pois média e mediana são próximas.")
         elif mean_val > med_val:
-            st.info("A distribuição apresenta **Assimetria Positiva (à direita)** (Média maior que a Mediana).")
+            st.info("A distribuição apresenta assimetria positiva (à direita), pois a média é maior que a mediana.")
         else:
-            st.info("A distribuição apresenta **Assimetria Negativa (à esquerda)** (Média menor que a Mediana).")
+            st.info("A distribuição apresenta assimetria negativa (à esquerda), pois a média é menor que a mediana.")
 
-    # ----------------------------------------------------
-    # MÓDULO 3: PROBABILIDADE E SIMULAÇÃO DE MONTE CARLO
-    # ----------------------------------------------------
-    with tab3:
-        st.header("🎲 Simulação de Monte Carlo")
-        sim_choice = st.radio("Selecione o Experimento:", ["(a) Lei dos Grandes Números (LGN)", "(b) Teorema Central do Limite (TCL)"])
-
-        if "(a)" in sim_choice:
-            st.subheader("Lei dos Grandes Números — Lançamento de Dados Simulados")
-            n_reps = st.slider("Número de Lançamentos:", 10, 5000, 500, step=50)
-
-            rolls = np.random.randint(1, 7, size=n_reps)
-            # Versão vetorizada com np.cumsum: O(n) em vez do loop original O(n²)
-            # que recalculava a média de toda a lista a cada novo lançamento.
-            cum_means = (np.cumsum(rolls) / np.arange(1, n_reps + 1)).tolist()
-
-            fig, ax = plt.subplots(figsize=(10, 4))
-            ax.plot(range(1, n_reps + 1), cum_means, label="Média Acumulada", color="purple")
-            ax.axhline(3.5, color="red", linestyle="--", label="Valor Esperado Teórico (3.5)")
-            ax.set_xlabel("Número de Ensaios")
-            ax.set_ylabel("Média Aritmética")
-            ax.legend()
-            st.pyplot(fig)
-            plt.close(fig)
-
+        if cv_val < 15:
+            st.info(f"O coeficiente de variação é {cv_val:.2f}%, indicando baixa dispersão relativa.")
+        elif cv_val < 30:
+            st.info(f"O coeficiente de variação é {cv_val:.2f}%, indicando dispersão relativa moderada.")
         else:
-            st.subheader("Teorema Central do Limite (TCL)")
-            var_tcl = st.selectbox("Escolha a variável do dataset:", num_cols, key="tcl_var")
-            sample_size = st.slider("Tamanho da Amostra (n):", 5, 200, 30)
-            num_samples = st.slider("Número de Amostras Simuladas:", 100, 5000, 1000)
+            st.info(f"O coeficiente de variação é {cv_val:.2f}%, indicando dispersão relativa elevada.")
 
-            pop_data = df[var_tcl].dropna().tolist()
-
-            if len(pop_data) < sample_size:
-                st.warning(
-                    f"A variável **{var_tcl}** possui apenas {len(pop_data)} valores válidos, "
-                    f"insuficiente para amostras de tamanho {sample_size}."
-                )
-                st.stop()
-
-            try:
-                sample_means = []
-                for _ in range(num_samples):
-                    sample = np.random.choice(pop_data, size=sample_size, replace=True)
-                    sample_means.append(minhastats.mean(sample.tolist()))
-            except ValueError as e:
-                st.error(f"Não foi possível simular as amostras de **{var_tcl}**: {e}")
-                st.stop()
-
-            fig, ax = plt.subplots(figsize=(10, 4))
-            sns.histplot(sample_means, kde=True, ax=ax, color="orange")
-            ax.set_title(f"Distribuição das Médias Amostrais (n={sample_size}, k={num_samples})")
-            st.pyplot(fig)
-            plt.close(fig)
-
-    # ----------------------------------------------------
-    # MÓDULO 4: DISTRIBUIÇÕES TEÓRICAS
-    # ----------------------------------------------------
-    with tab4:
-        st.header("📐 Ajuste de Distribuições Teóricas")
-        var_dist = st.selectbox("Escolha a variável para ajustar:", num_cols, key="dist_var")
-        dist_type = st.selectbox("Escolha a Distribuição Candidata:", ["Normal", "Exponencial"])
-
-        data_dist = df[var_dist].dropna().tolist()
-
-        if len(data_dist) < 2:
-            st.warning(
-                f"A variável **{var_dist}** possui menos de 2 valores válidos "
-                "e não pode ter uma distribuição ajustada."
-            )
+    else:
+        if not cat_cols:
+            st.warning("O dataset não possui variáveis categóricas detectadas.")
             st.stop()
+        cat_var = st.selectbox("Selecione uma variável categórica:", cat_cols, key="mod2_cat")
+        counts = df[cat_var].fillna("(ausente)").astype(str).value_counts()
+        cat_table = pd.DataFrame({
+            "Categoria": counts.index,
+            "Frequência": counts.values,
+            "Frequência relativa (%)": (counts.values / counts.sum() * 100).round(2),
+        })
+        st.dataframe(cat_table, use_container_width=True, hide_index=True)
+        fig, ax = plt.subplots(figsize=(10, 4))
+        top = counts.head(10).sort_values()
+        top.plot(kind="barh", ax=ax)
+        ax.set_title(f"Top categorias — {cat_var}")
+        ax.set_xlabel("Frequência")
+        st.pyplot(fig)
+        plt.close(fig)
 
-        try:
-            m_hat = minhastats.mean(data_dist)
-            s_hat = minhastats.std_dev(data_dist, ddof=1)
-        except ValueError as e:
-            st.error(f"Não foi possível ajustar a distribuição de **{var_dist}**: {e}")
-            st.stop()
+with tab3:
+    st.header("🎲 Simulação de Monte Carlo")
+    sim_choice = st.radio(
+        "Selecione o experimento:",
+        ["(a) Lei dos Grandes Números (LGN)", "(b) Teorema Central do Limite (TCL)"],
+        horizontal=True,
+    )
+
+    if "(a)" in sim_choice:
+        st.subheader("Lei dos Grandes Números — lançamento de dado")
+        n_reps = st.slider("Número de lançamentos:", 10, 5000, 500, step=50)
+        seed = st.number_input("Semente aleatória (reprodutibilidade):", min_value=0, value=42, step=1)
+        rng = np.random.default_rng(seed)
+        rolls = rng.integers(1, 7, size=n_reps)
+        cum_means = np.cumsum(rolls) / np.arange(1, n_reps + 1)
 
         fig, ax = plt.subplots(figsize=(10, 4))
-        sns.histplot(data_dist, stat="density", ax=ax, color="gray", label="Dados Reais")
-
-        x_vals = np.linspace(min(data_dist), max(data_dist), 200)
-
-        if dist_type == "Normal":
-            pdf = stats.norm.pdf(x_vals, loc=m_hat, scale=s_hat)
-            ax.plot(x_vals, pdf, 'r-', lw=2, label=f"Ajuste Normal (μ={m_hat:.1f}, σ={s_hat:.1f})")
-        else:
-            if min(data_dist) < 0:
-                st.warning(
-                    f"A variável **{var_dist}** possui valores negativos; "
-                    "a distribuição Exponencial só é definida para valores ≥ 0. "
-                    "O ajuste abaixo pode não ser representativo."
-                )
-            pdf = stats.expon.pdf(x_vals, scale=m_hat)
-            ax.plot(x_vals, pdf, 'g-', lw=2, label=f"Ajuste Exponencial (λ=1/{m_hat:.1f})")
-
+        ax.plot(range(1, n_reps + 1), cum_means, label="Média acumulada")
+        ax.axhline(3.5, linestyle="--", label="Valor esperado teórico = 3,5")
+        ax.set_xlabel("Número de ensaios")
+        ax.set_ylabel("Média")
         ax.legend()
         st.pyplot(fig)
         plt.close(fig)
+        st.info(f"Média final após {n_reps} lançamentos: **{cum_means[-1]:.4f}**. O valor teórico é 3,5.")
 
-    # ----------------------------------------------------
-    # MÓDULO 5: CORRELAÇÃO E REGRESSÃO LINEAR
-    # ----------------------------------------------------
-    with tab5:
-        st.header("📈 Correlação e Regressão Linear Simples")
-        col_x, col_y = st.columns(2)
-        x_var = col_x.selectbox("Variável Independente (X):", num_cols, index=0)
-        y_var = col_y.selectbox("Variável Dependente (Y):", num_cols, index=min(1, len(num_cols)-1))
+    else:
+        st.subheader("Teorema Central do Limite")
+        var_tcl = st.selectbox("Escolha a variável do dataset:", num_cols, key="tcl_var")
+        sample_size = st.slider("Tamanho da amostra (n):", 5, 200, 30)
+        num_samples = st.slider("Número de amostras simuladas (k):", 100, 5000, 1000)
+        seed = st.number_input("Semente aleatória:", min_value=0, value=42, step=1, key="tcl_seed")
+        pop_data = df[var_tcl].dropna().astype(float).to_numpy()
 
-        df_reg = df[[x_var, y_var]].dropna()
-        x_list = df_reg[x_var].tolist()
-        y_list = df_reg[y_var].tolist()
-
-        if len(x_list) < 2:
-            st.warning(
-                f"Não há pares de valores suficientes entre **{x_var}** e **{y_var}** "
-                "para ajustar um modelo de regressão."
-            )
+        if len(pop_data) < sample_size:
+            st.warning(f"A variável possui apenas {len(pop_data)} valores válidos, insuficiente para n={sample_size}.")
             st.stop()
 
-        # Cálculos via Núcleo Próprio!
-        try:
-            b0, b1, r2 = minhastats.linear_regression(x_list, y_list)
-            r = minhastats.pearson_correlation(x_list, y_list)
-        except ValueError as e:
-            st.error(
-                f"⚠️ Não foi possível ajustar o modelo entre **{x_var}** e **{y_var}**: {e}. "
-                f"Verifique se a variável '{x_var}' possui variação nos dados."
-            )
-            st.stop()
+        rng = np.random.default_rng(seed)
+        samples = rng.choice(pop_data, size=(num_samples, sample_size), replace=True)
+        sample_means = samples.mean(axis=1)
+        population_mean = minhastats.mean(pop_data.tolist())
+        population_std = minhastats.std_dev(pop_data.tolist(), ddof=1)
+        theoretical_se = population_std / math.sqrt(sample_size) if population_std else 0.0
 
-        st.subheader("Resultados do Modelo (Mínimos Quadrados Próprios)")
-        st.latex(fr"\hat{{Y}} = {b0:.4f} + {b1:.4f} \cdot X")
-
-        m1, m2 = st.columns(2)
-        m1.metric("Coeficiente de Correlação (r)", f"{r:.4f}")
-        m2.metric("Coeficiente de Determinação (R²)", f"{r2:.4f}")
-
-        # Predição Interativa
-        st.markdown("---")
-        st.subheader("🔮 Campo de Predição Interativa")
-        x_pred = st.number_input(f"Digite um valor para {x_var} (X):", value=float(minhastats.mean(x_list)))
-        y_hat = b0 + b1 * x_pred
-        st.success(rf"**Valor Predito para {y_var} ($\hat{{Y}}$):** {y_hat:.2f}")
-
-        # Gráfico de Dispersão com Reta
-        fig, ax = plt.subplots(figsize=(9, 4))
-        ax.scatter(x_list, y_list, alpha=0.3, label="Pacientes / Dados Reais")
-        x_range = np.linspace(min(x_list), max(x_list), 100)
-        ax.plot(x_range, b0 + b1 * x_range, color='red', linewidth=2, label="Reta de Regressão OLS")
-        ax.set_xlabel(x_var)
-        ax.set_ylabel(y_var)
-        ax.legend()
+        fig, ax = plt.subplots(figsize=(10, 4))
+        sns.histplot(sample_means, kde=True, ax=ax, stat="density")
+        ax.set_title(f"Distribuição das médias amostrais (n={sample_size}, k={num_samples})")
         st.pyplot(fig)
         plt.close(fig)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Média da população", f"{population_mean:.3f}")
+        c2.metric("Média das médias", f"{sample_means.mean():.3f}")
+        c3.metric("Erro-padrão teórico", f"{theoretical_se:.3f}")
 
-        st.warning("⚠️ **Alerta:** Correlação estatística não implica causalidade clínica!")
+with tab4:
+    st.header("📐 Ajuste de Distribuições Teóricas")
+    var_dist = st.selectbox("Escolha a variável:", num_cols, key="dist_var")
+    dist_type = st.selectbox("Distribuição candidata:", ["Normal", "Exponencial"])
+    data_dist = df[var_dist].dropna().astype(float).tolist()
+
+    if len(data_dist) < 2:
+        st.warning("São necessários pelo menos 2 valores válidos.")
+        st.stop()
+
+    m_hat = minhastats.mean(data_dist)
+    s_hat = minhastats.std_dev(data_dist, ddof=1)
+    fig, ax = plt.subplots(figsize=(10, 4))
+    sns.histplot(data_dist, stat="density", ax=ax, label="Dados reais")
+    x_vals = np.linspace(min(data_dist), max(data_dist), 300)
+
+    if dist_type == "Normal":
+        if s_hat == 0:
+            st.warning("A variável possui desvio padrão zero; não é possível ajustar uma Normal contínua.")
+            plt.close(fig)
+            st.stop()
+        pdf = stats.norm.pdf(x_vals, loc=m_hat, scale=s_hat)
+        ax.plot(x_vals, pdf, linewidth=2, label=f"Normal (μ={m_hat:.2f}, σ={s_hat:.2f})")
+        skewness = pd.Series(data_dist).skew()
+        interpretation = (
+            "O ajuste visual tende a ser mais adequado quando a distribuição observada é aproximadamente simétrica. "
+            f"A assimetria amostral calculada foi {skewness:.3f}."
+        )
+    else:
+        if min(data_dist) < 0 or m_hat <= 0:
+            plt.close(fig)
+            st.error("A distribuição Exponencial exige dados não negativos e média positiva. Escolha outra variável.")
+            st.stop()
+        scale = m_hat
+        pdf = stats.expon.pdf(x_vals, loc=0, scale=scale)
+        ax.plot(x_vals, pdf, linewidth=2, label=f"Exponencial (λ={1/scale:.4f})")
+        interpretation = (
+            "O ajuste Exponencial é plausível quando os dados são não negativos e apresentam decaimento aproximadamente exponencial. "
+            f"A média estimada foi {m_hat:.3f}."
+        )
+
+    ax.set_title(f"Ajuste {dist_type} — {var_dist}")
+    ax.legend()
+    st.pyplot(fig)
+    plt.close(fig)
+    st.info(interpretation)
+
+with tab5:
+    st.header("📈 Correlação e Regressão Linear Simples")
+    if len(num_cols) < 2:
+        st.warning("São necessárias pelo menos duas variáveis numéricas.")
+        st.stop()
+    col_x, col_y = st.columns(2)
+    x_var = col_x.selectbox("Variável independente (X):", num_cols, index=0)
+    y_var = col_y.selectbox("Variável dependente (Y):", num_cols, index=min(1, len(num_cols) - 1))
+
+    df_reg = df[[x_var, y_var]].dropna()
+    x_list = df_reg[x_var].astype(float).tolist()
+    y_list = df_reg[y_var].astype(float).tolist()
+    if len(x_list) < 2:
+        st.warning("Não há pares suficientes para o modelo.")
+        st.stop()
+
+    try:
+        b0, b1, r2 = minhastats.linear_regression(x_list, y_list)
+        r = minhastats.pearson_correlation(x_list, y_list)
+    except ValueError as exc:
+        st.error(f"Não foi possível ajustar o modelo: {exc}")
+        st.stop()
+
+    st.latex(fr"\hat{{Y}} = {b0:.4f} + {b1:.4f} \cdot X")
+    m1, m2 = st.columns(2)
+    m1.metric("Coeficiente de correlação (r)", f"{r:.4f}")
+    m2.metric("Coeficiente de determinação (R²)", f"{r2:.4f}")
+
+    st.subheader("🔮 Predição interativa")
+    x_pred = st.number_input(f"Digite um valor para {x_var}:", value=float(minhastats.mean(x_list)))
+    y_hat = b0 + b1 * x_pred
+    st.success(f"**Valor predito para {y_var}: {y_hat:.2f}**")
+
+    fig, ax = plt.subplots(figsize=(9, 4))
+    ax.scatter(x_list, y_list, alpha=0.3, label="Dados reais")
+    x_range = np.linspace(min(x_list), max(x_list), 100)
+    ax.plot(x_range, b0 + b1 * x_range, linewidth=2, label="Reta OLS")
+    ax.set_xlabel(x_var)
+    ax.set_ylabel(y_var)
+    ax.legend()
+    st.pyplot(fig)
+    plt.close(fig)
+
+    if abs(r) >= 0.7:
+        strength = "forte"
+    elif abs(r) >= 0.3:
+        strength = "moderada"
+    else:
+        strength = "fraca"
+    st.info(f"A associação linear observada é **{strength}** (|r|={abs(r):.3f}).")
+    st.warning("⚠️ Correlação estatística não implica causalidade clínica.")
+
+with tab6:
+    st.header("🔎 Módulo 6 — Três descobertas estatísticas")
+    st.markdown(
+        "As descobertas abaixo são calculadas automaticamente a partir do dataset e servem como ponto de partida "
+        "para a interpretação apresentada no relatório final."
+    )
+
+    discovery_var = st.selectbox("Variável numérica para as descobertas:", num_cols, key="discovery_var")
+    values = df[discovery_var].dropna().astype(float).tolist()
+    mean_d = minhastats.mean(values)
+    median_d = minhastats.median(values)
+    std_d = minhastats.std_dev(values)
+    q1_d = minhastats.quantile(values, 0.25)
+    q3_d = minhastats.quantile(values, 0.75)
+    iqr_d = q3_d - q1_d
+    outlier_count = sum(x < q1_d - 1.5 * iqr_d or x > q3_d + 1.5 * iqr_d for x in values)
+    cv_d = minhastats.coefficient_of_variation(values)
+
+    st.subheader("Descoberta 1 — Tendência central")
+    if mean_d > median_d:
+        st.write(f"A média ({mean_d:.2f}) é maior que a mediana ({median_d:.2f}), sugerindo assimetria positiva.")
+    elif mean_d < median_d:
+        st.write(f"A média ({mean_d:.2f}) é menor que a mediana ({median_d:.2f}), sugerindo assimetria negativa.")
+    else:
+        st.write(f"A média e a mediana são praticamente iguais ({mean_d:.2f}), sugerindo uma distribuição aproximadamente simétrica.")
+
+    st.subheader("Descoberta 2 — Dispersão")
+    st.write(f"O desvio padrão amostral é {std_d:.2f} e o coeficiente de variação é {cv_d:.2f}%, indicando a magnitude da variabilidade relativa.")
+
+    st.subheader("Descoberta 3 — Valores extremos")
+    st.write(f"A regra do IQR identificou **{outlier_count}** outliers entre {len(values)} observações ({outlier_count / len(values) * 100:.2f}%).")
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    sns.histplot(values, kde=True, ax=ax)
+    ax.axvline(mean_d, linestyle="--", label="Média")
+    ax.axvline(median_d, linestyle=":", label="Mediana")
+    ax.legend()
+    st.pyplot(fig)
+    plt.close(fig)
