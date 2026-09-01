@@ -15,13 +15,24 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown("""
+<style>
+.block-container {
+    max-width: 1120px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    margin: 0 auto;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("🩺 Laboratório Estatístico Interativo — Análise de Saúde")
 st.markdown("---")
 
 
-def render_figure(fig):
-    """Renderiza uma figura Matplotlib ocupando responsivamente o container."""
-    st.pyplot(fig, width="stretch")
+def render_figure(fig, width="stretch"):
+    """Renderiza uma figura com dimensões controladas e fecha o objeto após o uso."""
+    st.pyplot(fig, width=width)
     plt.close(fig)
 
 
@@ -154,7 +165,7 @@ with tab2:
         except ValueError as exc:
             st.warning(f"Não foi possível construir a tabela de frequência: {exc}")
 
-        fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+        fig, axes = plt.subplots(1, 2, figsize=(9, 3.5), constrained_layout=True)
         sns.histplot(data_clean, kde=True, ax=axes[0])
         axes[0].set_title(f"Histograma — {var_sel}")
         sns.boxplot(x=data_clean, ax=axes[1])
@@ -192,7 +203,7 @@ with tab2:
 
         chart_col1, chart_col2 = st.columns(2)
         with chart_col1:
-            fig_bar, ax_bar = plt.subplots(figsize=(10, 4))
+            fig_bar, ax_bar = plt.subplots(figsize=(6, 3.2), constrained_layout=True)
             counts.head(10).sort_values().plot(kind="barh", ax=ax_bar)
             ax_bar.set_title(f"Top categorias — {cat_var}")
             ax_bar.set_xlabel("Frequência")
@@ -204,14 +215,14 @@ with tab2:
                 top_counts.loc["Outras"] = counts.iloc[6:].sum()
             percentages = top_counts / top_counts.sum() * 100
 
-            fig_pie, ax_pie = plt.subplots(figsize=(8, 6))
+            fig_pie, ax_pie = plt.subplots(figsize=(5.5, 4.5), constrained_layout=True)
             wedges, _, _ = ax_pie.pie(
                 top_counts.values,
                 labels=None,
                 autopct=lambda pct: f"{pct:.1f}%" if pct >= 5 else "",
                 startangle=90,
                 pctdistance=0.72,
-                textprops={"fontsize": 10},
+                textprops={"fontsize": 9},
             )
 
             small_items = []
@@ -239,7 +250,7 @@ with tab2:
                         xytext=(x_text, y_text),
                         ha="right" if side == "left" else "left",
                         va="center",
-                        fontsize=9,
+                        fontsize=8,
                         arrowprops={
                             "arrowstyle": "-",
                             "connectionstyle": "arc3",
@@ -251,7 +262,7 @@ with tab2:
             place_small_labels(left_items, "left")
             place_small_labels(right_items, "right")
 
-            ax_pie.set_title(f"Distribuição das categorias — {cat_var}", pad=12)
+            ax_pie.set_title(f"Distribuição das categorias — {cat_var}", pad=10)
             ax_pie.legend(
                 wedges,
                 [f"{label} ({pct:.1f}%)" for label, pct in zip(top_counts.index, percentages)],
@@ -259,9 +270,9 @@ with tab2:
                 loc="center left",
                 bbox_to_anchor=(1.02, 0.5),
                 frameon=False,
+                fontsize=8,
             )
             ax_pie.set_aspect("equal")
-            fig_pie.subplots_adjust(left=0.02, right=0.72, top=0.88, bottom=0.05)
             render_figure(fig_pie)
 
         st.caption("No gráfico de pizza, percentuais menores que 5% são exibidos externamente com uma linha-guia; os valores também aparecem na legenda.")
@@ -276,7 +287,7 @@ with tab3:
         rng = np.random.default_rng(seed)
         rolls = rng.integers(1, 7, size=n_reps)
         cum_means = np.cumsum(rolls) / np.arange(1, n_reps + 1)
-        fig, ax = plt.subplots(figsize=(10, 4))
+        fig, ax = plt.subplots(figsize=(8, 3.4), constrained_layout=True)
         ax.plot(range(1, n_reps + 1), cum_means, label="Média acumulada")
         ax.axhline(3.5, linestyle="--", label="Valor esperado teórico = 3,5")
         ax.set_xlabel("Número de ensaios")
@@ -300,7 +311,7 @@ with tab3:
         population_mean = minhastats.mean(pop_data.tolist())
         population_std = minhastats.std_dev(pop_data.tolist(), ddof=1)
         theoretical_se = population_std / math.sqrt(sample_size) if population_std else 0.0
-        fig, ax = plt.subplots(figsize=(10, 4))
+        fig, ax = plt.subplots(figsize=(8, 3.4), constrained_layout=True)
         sns.histplot(sample_means, kde=True, ax=ax, stat="density")
         ax.set_title(f"Distribuição das médias amostrais (n={sample_size}, k={num_samples})")
         render_figure(fig)
@@ -319,7 +330,7 @@ with tab4:
         st.stop()
     m_hat = minhastats.mean(data_dist)
     s_hat = minhastats.std_dev(data_dist, ddof=1)
-    fig, ax = plt.subplots(figsize=(10, 4))
+    fig, ax = plt.subplots(figsize=(8, 3.4), constrained_layout=True)
     sns.histplot(data_dist, stat="density", ax=ax, label="Dados reais")
     x_vals = np.linspace(min(data_dist), max(data_dist), 300)
     if dist_type == "Normal":
@@ -373,7 +384,7 @@ with tab5:
     x_pred = st.number_input(f"Digite um valor para {x_var}:", value=float(minhastats.mean(x_list)))
     y_hat = b0 + b1 * x_pred
     st.success(f"**Valor predito para {y_var}: {y_hat:.2f}**")
-    fig, ax = plt.subplots(figsize=(9, 4))
+    fig, ax = plt.subplots(figsize=(7.5, 3.4), constrained_layout=True)
     ax.scatter(x_list, y_list, alpha=0.3, label="Dados reais")
     x_range = np.linspace(min(x_list), max(x_list), 100)
     ax.plot(x_range, b0 + b1 * x_range, linewidth=2, label="Reta OLS")
@@ -410,7 +421,7 @@ with tab6:
     st.write(f"O desvio padrão amostral é {std_d:.2f} e o coeficiente de variação é {cv_d:.2f}%, indicando a magnitude da variabilidade relativa.")
     st.subheader("Descoberta 3 — Valores extremos")
     st.write(f"A regra do IQR identificou **{outlier_count}** outliers entre {len(values)} observações ({outlier_count / len(values) * 100:.2f}%).")
-    fig, ax = plt.subplots(figsize=(10, 4))
+    fig, ax = plt.subplots(figsize=(8, 3.4), constrained_layout=True)
     sns.histplot(values, kde=True, ax=ax)
     ax.axvline(mean_d, linestyle="--", label="Média")
     ax.axvline(median_d, linestyle=":", label="Mediana")
