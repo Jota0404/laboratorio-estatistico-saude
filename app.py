@@ -18,6 +18,13 @@ st.set_page_config(
 st.title("🩺 Laboratório Estatístico Interativo — Análise de Saúde")
 st.markdown("---")
 
+
+def render_figure(fig):
+    """Renderiza uma figura Matplotlib ocupando responsivamente o container."""
+    st.pyplot(fig, width="stretch")
+    plt.close(fig)
+
+
 @st.cache_data
 def load_data(data_dir: str = "data/raw"):
     """Carrega o primeiro CSV local disponível."""
@@ -30,6 +37,7 @@ def load_data(data_dir: str = "data/raw"):
     except (pd.errors.ParserError, UnicodeDecodeError, OSError) as exc:
         st.error(f"Erro ao ler o arquivo '{path}': {exc}")
         return None
+
 
 df = load_data()
 
@@ -151,8 +159,7 @@ with tab2:
         axes[0].set_title(f"Histograma — {var_sel}")
         sns.boxplot(x=data_clean, ax=axes[1])
         axes[1].set_title(f"Boxplot — {var_sel}")
-        st.pyplot(fig)
-        plt.close(fig)
+        render_figure(fig)
 
         st.subheader("💡 Interpretação Automática")
         if std_sample == 0:
@@ -189,8 +196,7 @@ with tab2:
             counts.head(10).sort_values().plot(kind="barh", ax=ax_bar)
             ax_bar.set_title(f"Top categorias — {cat_var}")
             ax_bar.set_xlabel("Frequência")
-            st.pyplot(fig_bar)
-            plt.close(fig_bar)
+            render_figure(fig_bar)
 
         with chart_col2:
             top_counts = counts.head(6).copy()
@@ -208,8 +214,6 @@ with tab2:
                 textprops={"fontsize": 10},
             )
 
-            # Os rótulos das fatias pequenas são colocados externamente
-            # em posições verticais distintas, evitando sobreposição.
             small_items = []
             for index, (wedge, pct) in enumerate(zip(wedges, percentages)):
                 if pct < 5:
@@ -258,8 +262,7 @@ with tab2:
             )
             ax_pie.set_aspect("equal")
             fig_pie.subplots_adjust(left=0.02, right=0.72, top=0.88, bottom=0.05)
-            st.pyplot(fig_pie)
-            plt.close(fig_pie)
+            render_figure(fig_pie)
 
         st.caption("No gráfico de pizza, percentuais menores que 5% são exibidos externamente com uma linha-guia; os valores também aparecem na legenda.")
 
@@ -279,8 +282,7 @@ with tab3:
         ax.set_xlabel("Número de ensaios")
         ax.set_ylabel("Média")
         ax.legend()
-        st.pyplot(fig)
-        plt.close(fig)
+        render_figure(fig)
         st.info(f"Média final após {n_reps} lançamentos: **{cum_means[-1]:.4f}**. O valor teórico é 3,5.")
     else:
         st.subheader("Teorema Central do Limite")
@@ -301,8 +303,7 @@ with tab3:
         fig, ax = plt.subplots(figsize=(10, 4))
         sns.histplot(sample_means, kde=True, ax=ax, stat="density")
         ax.set_title(f"Distribuição das médias amostrais (n={sample_size}, k={num_samples})")
-        st.pyplot(fig)
-        plt.close(fig)
+        render_figure(fig)
         c1, c2, c3 = st.columns(3)
         c1.metric("Média da população", f"{population_mean:.3f}")
         c2.metric("Média das médias", f"{sample_means.mean():.3f}")
@@ -341,8 +342,7 @@ with tab4:
         interpretation = f"O ajuste Exponencial é plausível quando os dados são não negativos e apresentam decaimento aproximadamente exponencial. A média estimada foi {m_hat:.3f}."
     ax.set_title(f"Ajuste {dist_type} — {var_dist}")
     ax.legend()
-    st.pyplot(fig)
-    plt.close(fig)
+    render_figure(fig)
     st.info(interpretation)
 
 with tab5:
@@ -380,8 +380,7 @@ with tab5:
     ax.set_xlabel(x_var)
     ax.set_ylabel(y_var)
     ax.legend()
-    st.pyplot(fig)
-    plt.close(fig)
+    render_figure(fig)
     strength = "forte" if abs(r) >= 0.7 else "moderada" if abs(r) >= 0.3 else "fraca"
     st.info(f"A associação linear observada é **{strength}** (|r|={abs(r):.3f}).")
     st.warning("⚠️ Correlação estatística não implica causalidade clínica.")
@@ -416,5 +415,4 @@ with tab6:
     ax.axvline(mean_d, linestyle="--", label="Média")
     ax.axvline(median_d, linestyle=":", label="Mediana")
     ax.legend()
-    st.pyplot(fig)
-    plt.close(fig)
+    render_figure(fig)
