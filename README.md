@@ -152,15 +152,37 @@ A tolerância numérica é definida individualmente nos testes conforme a opera�
 
 ## 📷 Evidências da aplicação
 
-> **Antes da entrega:** adicionar neste README capturas de tela reais da aplicação executando os módulos 0, 2, 3, 4 e 5. O professor solicita GIF ou screenshots como evidência de funcionamento.
+As capturas abaixo foram obtidas durante a validação manual da aplicação e devem ficar no diretório `docs/screenshots/` do repositório.
 
-Sugestão de evidências mínimas:
+### Módulo 0 — Dados
 
-1. Módulo 0 — dataset e quantidade de registros.
-2. Módulo 2 — tabela de frequência + métricas + histogram/boxplot.
-3. Módulo 3 — LGN e TCL.
-4. Módulo 4 — ajuste Normal/Exponencial.
-5. Módulo 5 — dispersão, equação e R².
+![Módulo 0 — Dados](docs/screenshots/modulo-0-dados.png)
+
+### Módulo 2 — Estatística Descritiva
+
+![Módulo 2 — Métricas numéricas](docs/screenshots/modulo-2-numerica-metricas.png)
+
+![Módulo 2 — Frequência e gráficos](docs/screenshots/modulo-2-frequencia-graficos.png)
+
+![Módulo 2 — Variável categórica](docs/screenshots/modulo-2-categorica.png)
+
+### Módulo 3 — Monte Carlo
+
+![Módulo 3 — Lei dos Grandes Números](docs/screenshots/modulo-3-lgn.png)
+
+![Módulo 3 — Teorema Central do Limite](docs/screenshots/modulo-3-tcl.png)
+
+### Módulo 4 — Distribuições Teóricas
+
+![Módulo 4 — Ajuste Normal](docs/screenshots/modulo-4-normal.png)
+
+![Módulo 4 — Ajuste Exponencial](docs/screenshots/modulo-4-exponencial.png)
+
+### Módulo 5 — Correlação e Regressão
+
+![Módulo 5 — Regressão time_in_hospital × num_lab_procedures](docs/screenshots/modulo-5-regressao-time-numlab.png)
+
+![Módulo 5 — Regressão num_lab_procedures × num_medications](docs/screenshots/modulo-5-regressao-lab-med.png)
 
 ## 📄 Relatório
 
@@ -177,6 +199,8 @@ laboratorio-estatistico-saude/
 ├── .gitignore
 ├── data/
 │   └── raw/
+├── docs/
+│   └── screenshots/
 ├── scripts/
 │   └── download_dataset.py
 ├── src/
@@ -192,4 +216,4 @@ O repositório não versiona CSVs brutos de saúde. O dataset utilizado é públ
 
 ## 🎥 Vídeo demonstrativo
 
-O vídeo demonstrativo não será produzido pelo autor desta entrega. Os demais requisitos de implementação, documentação e evidências devem ser atendidos conforme o enunciado da atividade.
+O vídeo demonstrativo não será produzido pelo autor desta entrega. Os demais requisitos de implementação, documentação e evidências são atendidos conforme o escopo desta entrega.
