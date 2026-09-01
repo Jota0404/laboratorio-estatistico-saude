@@ -1,6 +1,5 @@
 import glob
 import math
-from pathlib import Path
 
 import streamlit as st
 import pandas as pd
@@ -186,12 +185,27 @@ with tab2:
             "Frequência relativa (%)": (counts.values / counts.sum() * 100).round(2),
         })
         st.dataframe(cat_table, use_container_width=True, hide_index=True)
-        fig, ax = plt.subplots(figsize=(10, 4))
-        counts.head(10).sort_values().plot(kind="barh", ax=ax)
-        ax.set_title(f"Top categorias — {cat_var}")
-        ax.set_xlabel("Frequência")
-        st.pyplot(fig)
-        plt.close(fig)
+
+        chart_col1, chart_col2 = st.columns(2)
+        with chart_col1:
+            fig_bar, ax_bar = plt.subplots(figsize=(10, 4))
+            counts.head(10).sort_values().plot(kind="barh", ax=ax_bar)
+            ax_bar.set_title(f"Top categorias — {cat_var}")
+            ax_bar.set_xlabel("Frequência")
+            st.pyplot(fig_bar)
+            plt.close(fig_bar)
+
+        with chart_col2:
+            fig_pie, ax_pie = plt.subplots(figsize=(6, 4))
+            top_counts = counts.head(6).copy()
+            if len(counts) > 6:
+                top_counts.loc["Outras"] = counts.iloc[6:].sum()
+            ax_pie.pie(top_counts.values, labels=top_counts.index, autopct="%.1f%%", startangle=90)
+            ax_pie.set_title(f"Distribuição das categorias — {cat_var}")
+            st.pyplot(fig_pie)
+            plt.close(fig_pie)
+
+        st.caption("O gráfico de pizza agrupa as categorias menos frequentes em 'Outras' para manter a leitura visual adequada.")
 
 with tab3:
     st.header("🎲 Simulação de Monte Carlo")
