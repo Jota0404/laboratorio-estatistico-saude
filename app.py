@@ -196,16 +196,33 @@ with tab2:
             plt.close(fig_bar)
 
         with chart_col2:
-            fig_pie, ax_pie = plt.subplots(figsize=(6, 4))
             top_counts = counts.head(6).copy()
             if len(counts) > 6:
                 top_counts.loc["Outras"] = counts.iloc[6:].sum()
-            ax_pie.pie(top_counts.values, labels=top_counts.index, autopct="%.1f%%", startangle=90)
-            ax_pie.set_title(f"Distribuição das categorias — {cat_var}")
+
+            fig_pie, ax_pie = plt.subplots(figsize=(7, 5))
+            wedges, _, autotexts = ax_pie.pie(
+                top_counts.values,
+                autopct="%.1f%%",
+                startangle=90,
+                pctdistance=0.72,
+                textprops={"fontsize": 10},
+            )
+            ax_pie.set_title(f"Distribuição das categorias — {cat_var}", pad=14)
+            ax_pie.legend(
+                wedges,
+                [str(label) for label in top_counts.index],
+                title="Categorias",
+                loc="center left",
+                bbox_to_anchor=(1.0, 0.5),
+                frameon=False,
+            )
+            ax_pie.set_aspect("equal")
+            fig_pie.tight_layout()
             st.pyplot(fig_pie)
             plt.close(fig_pie)
 
-        st.caption("O gráfico de pizza agrupa as categorias menos frequentes em 'Outras' para manter a leitura visual adequada.")
+        st.caption("O gráfico de pizza exibe as seis maiores categorias; as demais são agrupadas em 'Outras'.")
 
 with tab3:
     st.header("🎲 Simulação de Monte Carlo")
