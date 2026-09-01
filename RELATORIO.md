@@ -206,6 +206,8 @@ Os parâmetros da Normal são estimados a partir da média e do desvio padrão d
 
 As curvas são sobrepostas ao histograma dos dados reais. A aplicação também apresenta uma interpretação textual da adequação esperada do ajuste.
 
+Durante a validação manual, a variável `time_in_hospital` apresentou comportamento claramente assimétrico. No ajuste Normal, a assimetria amostral observada foi **1,134**, com evidente afastamento entre o histograma e a curva Normal. No ajuste Exponencial, a curva acompanhou a tendência geral de decaimento, mas os picos discretos dos valores inteiros permaneceram afastados da curva estimada. Esses resultados mostram que a adequação da distribuição deve ser avaliada visualmente, sem presumir que uma distribuição teórica necessariamente represente bem os dados.
+
 **Evidência a inserir na versão final:** screenshot dos dois ajustes.
 
 ## 11. Módulo 5 — Correlação e Regressão
@@ -220,6 +222,8 @@ O usuário seleciona duas variáveis numéricas. O módulo apresenta:
 - campo de predição interativa;
 - interpretação da força da associação;
 - alerta explícito de que correlação não implica causalidade.
+
+Na validação manual com `time_in_hospital` como X e `num_medications` como Y, foi obtido **r = 0,4661** e **R² = 0,2173**, caracterizando associação linear moderada e indicando que o modelo explica aproximadamente 21,73% da variação observada em `num_medications`.
 
 **Evidência a inserir na versão final:** screenshot do módulo com equação, R² e gráfico.
 
@@ -241,17 +245,19 @@ Quantifica os outliers identificados pela regra do IQR e informa sua proporção
 
 ### Registro final das descobertas
 
-> **Importante:** antes da entrega, selecionar no aplicativo a variável escolhida para a análise final, registrar os valores exibidos e substituir esta seção por três achados específicos do dataset, com os números e screenshots correspondentes. Não devem ser inventados resultados que não tenham sido observados na execução real.
+Para a variável **`time_in_hospital`**, foram observados os seguintes resultados na execução real do aplicativo:
 
-- **Descoberta final 1:** [PREENCHER com variável, estatística, valor e interpretação]
-- **Descoberta final 2:** [PREENCHER com variável, estatística, valor e interpretação]
-- **Descoberta final 3:** [PREENCHER com variável, estatística, valor e interpretação]
+- **Descoberta final 1 — Tendência central:** a média foi **4,40** e a mediana **4,00**. Como a média é maior que a mediana, os dados apresentam **assimetria positiva**.
+- **Descoberta final 2 — Dispersão:** o desvio padrão amostral foi **2,99** e o coeficiente de variação foi **67,91%**, indicando **elevada variabilidade relativa** em torno da média.
+- **Descoberta final 3 — Valores extremos:** a regra do IQR identificou **2.252 outliers** entre **101.766 observações**, correspondendo a aproximadamente **2,21%** do conjunto.
+
+Esses valores foram registrados a partir da execução real do módulo com `time_in_hospital` selecionada e devem ser acompanhados pela captura de tela correspondente na versão final entregue.
 
 ## 13. Conclusão
 
 O laboratório integra programação, estatística e visualização de dados em uma aplicação interativa. A separação entre núcleo matemático, interface e testes permite validar os cálculos próprios independentemente da camada visual e torna o projeto mais fácil de manter e reproduzir.
 
-A etapa final da entrega deve incluir as evidências visuais reais da aplicação, a identificação do aluno e as três descobertas estatísticas observadas na execução do dataset.
+A etapa final da entrega deve incluir as evidências visuais reais da aplicação, a identificação do aluno e, preferencialmente, a consolidação das três descobertas estatísticas registradas neste relatório. O vídeo demonstrativo permanece como item não produzido nesta entrega.
 
 ## 14. Referências
 
