@@ -26,10 +26,12 @@ def median(data: list[float]) -> float:
 
 
 def mode(data: list[float]) -> list[float]:
-    """Retorna todas as modas, isto é, os valores com maior frequência."""
+    """Retorna as modas; retorna lista vazia quando não há repetição."""
     _validate_data(data)
     counts = Counter(data)
     max_count = max(counts.values())
+    if max_count == 1:
+        return []
     return sorted([value for value, count in counts.items() if count == max_count])
 
 
@@ -39,11 +41,7 @@ def amplitude(data: list[float]) -> float:
     return max(data) - min(data)
 
 
-def variance(
-    data: list[float],
-    ddof: int = 1,
-    _mean: Optional[float] = None,
-) -> float:
+def variance(data: list[float], ddof: int = 1, _mean: Optional[float] = None) -> float:
     """Calcula variância amostral (ddof=1) ou populacional (ddof=0)."""
     _validate_data(data)
     n = len(data)
@@ -83,23 +81,14 @@ def percentile(data: list[float], p: float) -> float:
 
 
 def coefficient_of_variation(data: list[float], ddof: int = 1) -> float:
-    """Calcula o coeficiente de variação em porcentagem.
-
-    CV = (desvio padrão / |média|) * 100.
-    """
+    """Calcula o coeficiente de variação em porcentagem."""
     m = mean(data)
     if m == 0:
         raise ValueError("Coeficiente de variação indefinido quando a média é zero.")
     return std_dev(data, ddof=ddof) / abs(m) * 100.0
 
 
-def covariance(
-    x: list[float],
-    y: list[float],
-    ddof: int = 1,
-    _mx: Optional[float] = None,
-    _my: Optional[float] = None,
-) -> float:
+def covariance(x: list[float], y: list[float], ddof: int = 1, _mx: Optional[float] = None, _my: Optional[float] = None) -> float:
     """Calcula a covariância amostral ou populacional entre X e Y."""
     if len(x) != len(y):
         raise ValueError("Listas devem ter o mesmo tamanho.")
@@ -128,10 +117,7 @@ def pearson_correlation(x: list[float], y: list[float]) -> float:
 
 
 def linear_regression(x: list[float], y: list[float]) -> tuple[float, float, float]:
-    """Ajusta regressão linear simples por Mínimos Quadrados (OLS).
-
-    Retorna (intercepto, inclinação, R²).
-    """
+    """Ajusta regressão linear simples por Mínimos Quadrados (OLS)."""
     if len(x) != len(y):
         raise ValueError("Listas devem ter o mesmo tamanho.")
     mx, my = mean(x), mean(y)
@@ -140,7 +126,6 @@ def linear_regression(x: list[float], y: list[float]) -> tuple[float, float, flo
         raise ValueError("Variância de X não pode ser zero.")
     var_y = variance(y, ddof=1, _mean=my)
     cov_xy = covariance(x, y, ddof=1, _mx=mx, _my=my)
-
     beta_1 = cov_xy / var_x
     beta_0 = my - beta_1 * mx
     r = 0.0 if var_y == 0 else cov_xy / math.sqrt(var_x * var_y)
