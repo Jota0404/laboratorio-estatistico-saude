@@ -18,7 +18,6 @@ st.set_page_config(
 st.title("🩺 Laboratório Estatístico Interativo — Análise de Saúde")
 st.markdown("---")
 
-
 @st.cache_data
 def load_data(data_dir: str = "data/raw"):
     """Carrega o primeiro CSV local disponível."""
@@ -32,14 +31,13 @@ def load_data(data_dir: str = "data/raw"):
         st.error(f"Erro ao ler o arquivo '{path}': {exc}")
         return None
 
-
 df = load_data()
 
 if df is None:
     st.error("Nenhum CSV foi encontrado em `data/raw/`.")
     st.info(
-        "Baixe o dataset público indicado no README e salve o CSV em "
-        "`data/raw/`. O projeto não versiona dados brutos automaticamente."
+        "Baixe o dataset público indicado no README e salve o CSV em `data/raw/`. "
+        "O projeto não versiona dados brutos automaticamente."
     )
     st.stop()
 
@@ -53,7 +51,6 @@ cat_cols = df.select_dtypes(exclude=[np.number]).columns.tolist()
 if len(num_cols) == 0:
     st.error("O dataset precisa possuir pelo menos uma variável numérica.")
     st.stop()
-
 
 tab0, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📦 Módulo 0: Dados",
@@ -201,52 +198,70 @@ with tab2:
                 top_counts.loc["Outras"] = counts.iloc[6:].sum()
             percentages = top_counts / top_counts.sum() * 100
 
-            fig_pie, ax_pie = plt.subplots(figsize=(7, 5))
-            wedges, _, autotexts = ax_pie.pie(
+            fig_pie, ax_pie = plt.subplots(figsize=(8, 6))
+            wedges, _, _ = ax_pie.pie(
                 top_counts.values,
                 labels=None,
                 autopct=lambda pct: f"{pct:.1f}%" if pct >= 5 else "",
                 startangle=90,
-                pctdistance=0.68,
+                pctdistance=0.72,
                 textprops={"fontsize": 10},
             )
 
-            # Percentuais muito pequenos ficam fora da fatia, com uma seta
-            # apontando diretamente para a porção correspondente.
-            for wedge, pct in zip(wedges, percentages):
+            # Os rótulos das fatias pequenas são colocados externamente
+            # em posições verticais distintas, evitando sobreposição.
+            small_items = []
+            for index, (wedge, pct) in enumerate(zip(wedges, percentages)):
                 if pct < 5:
                     angle = math.radians((wedge.theta1 + wedge.theta2) / 2.0)
                     x = math.cos(angle)
                     y = math.sin(angle)
-                    horizontal_alignment = "left" if x >= 0 else "right"
+                    small_items.append((index, wedge, pct, x, y))
+
+            left_items = sorted([item for item in small_items if item[3] < 0], key=lambda item: item[4], reverse=True)
+            right_items = sorted([item for item in small_items if item[3] >= 0], key=lambda item: item[4], reverse=True)
+
+            def place_small_labels(items, side):
+                if not items:
+                    return
+                base_positions = np.linspace(0.65, 1.15, len(items))
+                for (_, wedge, pct, x, _), y_text in zip(items, base_positions[::-1]):
+                    sign = -1 if side == "left" else 1
+                    x_text = 1.35 * sign
+                    angle = math.radians((wedge.theta1 + wedge.theta2) / 2.0)
                     ax_pie.annotate(
                         f"{pct:.1f}%",
-                        xy=(x * 0.92, y * 0.92),
-                        xytext=(x * 1.32, y * 1.32),
-                        ha=horizontal_alignment,
+                        xy=(0.94 * math.cos(angle), 0.94 * math.sin(angle)),
+                        xytext=(x_text, y_text),
+                        ha="right" if side == "left" else "left",
                         va="center",
                         fontsize=9,
                         arrowprops={
                             "arrowstyle": "-",
                             "connectionstyle": "arc3",
+                            "shrinkA": 0,
+                            "shrinkB": 0,
                         },
                     )
 
-            ax_pie.set_title(f"Distribuição das categorias — {cat_var}", pad=14)
+            place_small_labels(left_items, "left")
+            place_small_labels(right_items, "right")
+
+            ax_pie.set_title(f"Distribuição das categorias — {cat_var}", pad=12)
             ax_pie.legend(
                 wedges,
-                [str(label) for label in top_counts.index],
+                [f"{label} ({pct:.1f}%)" for label, pct in zip(top_counts.index, percentages)],
                 title="Categorias",
                 loc="center left",
-                bbox_to_anchor=(1.0, 0.5),
+                bbox_to_anchor=(1.02, 0.5),
                 frameon=False,
             )
             ax_pie.set_aspect("equal")
-            fig_pie.tight_layout()
+            fig_pie.subplots_adjust(left=0.02, right=0.72, top=0.88, bottom=0.05)
             st.pyplot(fig_pie)
             plt.close(fig_pie)
 
-        st.caption("No gráfico de pizza, percentuais menores que 5% são exibidos externamente com uma seta para facilitar a leitura.")
+        st.caption("No gráfico de pizza, percentuais menores que 5% são exibidos externamente com uma linha-guia; os valores também aparecem na legenda.")
 
 with tab3:
     st.header("🎲 Simulação de Monte Carlo")
