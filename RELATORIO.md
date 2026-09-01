@@ -1,58 +1,261 @@
-# 📊 Relatório Técnico de Desenvolvimento e Refatoração
-## Laboratório Estatístico Interativo — Análise de Saúde
+# Relatório — Laboratório Estatístico Interativo de Saúde
 
+## 1. Identificação
 
-## 1. Visão Geral do Projeto
+- **Aluno:** [PREENCHER NOME COMPLETO]
+- **Matrícula:** [PREENCHER MATRÍCULA]
+- **Disciplina:** [PREENCHER]
+- **Repositório:** https://github.com/Jota0404/laboratorio-estatistico-saude
 
-O **Laboratório Estatístico Interativo** é uma aplicação web interativa desenvolvida em Python e Streamlit com o objetivo de oferecer uma ferramenta didática e analítica para o processamento de dados de saúde pública e hospitalar. 
+## 2. Objetivo
 
-A aplicação aborda desde a análise descritiva inicial (medidas de tendência central, dispersão e detecção de *outliers*) até a modelagem inferencial e preditiva (distribuições de probabilidade, simulação de Monte Carlo via Lei dos Grandes Números e Regressão Linear Simples por Mínimos Quadrados).
+O projeto consiste na construção de um laboratório estatístico interativo em Python e Streamlit, aplicado a um dataset real da área da saúde. A aplicação permite explorar estatística descritiva, simulações de Monte Carlo, distribuições teóricas, correlação e regressão linear, mantendo os cálculos estatísticos fundamentais em uma biblioteca própria.
 
+A arquitetura separa a interface (`app.py`), o núcleo matemático (`src/minhastats.py`) e os testes automatizados (`tests/test_minhastats.py`).
 
-## 2. Arquitetura e Decisões de Projeto
+## 3. Dataset escolhido
 
-O projeto adota uma arquitetura modular baseada no princípio de **Responsabilidade Única (SRP)**:
+Foi escolhido o dataset **Diabetes 130-US Hospitals for Years 1999-2008**, disponível no UCI Machine Learning Repository:
 
-- **Núcleo Estatístico (`src/minhastats.py`):** Implementado do zero em Python puro, sem dependências de frameworks externos para os cálculos fundamentais. Esse módulo é totalmente independente da camada de interface e de bibliotecas de manipulação de dados, garantindo portabilidade e facilidade de testes unitários.
-- **Camada de Apresentação (`app.py`):** Utiliza o Streamlit para construir a interface do usuário, orquestrando as entradas do usuário, invocações do núcleo estatístico e renderização de dashboards interativos.
-- **Suíte de Testes (`tests/test_minhastats.py`):** Conjunto de testes automatizados com `pytest` que validam a precisão matemática das implementações próprias contra resultados de referência de bibliotecas consolidadas (`numpy` e `scipy`).
+https://archive.ics.uci.edu/dataset/296/diabetes+130+us+hospitals+for+years+1999-2008
 
+O conjunto possui 101.766 registros e 47 atributos relacionados a atendimentos hospitalares de pacientes com diabetes. Ele oferece variáveis numéricas e categóricas suficientes para exploração estatística e análise das relações entre características do atendimento e resultados clínicos.
 
-## 3. Processo de Code Review e Refatoração
+O download é reproduzível por meio de:
 
-Após a etapa inicial de desenvolvimento, o código passou por uma revisão técnica detalhada (Code Review Sênior), resultando em melhorias críticas em quatro eixos principais:
+```bash
+python scripts/download_dataset.py
+```
 
-### 3.1. Performance e Otimização Algorítmica
-- **Vetorização da Lei dos Grandes Números:** A simulação acumulativa no Módulo 3 possuía um loop O(n²), recalculando somas consecutivas a cada passo. O trecho foi refatorado utilizando operações vetorizadas (`np.cumsum`), reduzindo a complexidade temporal para O(n) e eliminando travamentos na interface durante execuções com $n = 5.000$ amostras.
-- **Eliminação de Recomputação Redundante:** O cálculo de regressão linear e covariância recalculava a média das variáveis múltiplas vezes. O núcleo em `minhastats.py` foi ajustado para reaproveitar parâmetros pré-calculados de média e variância em chamadas dependentes.
+Os dados brutos não são versionados no Git. O script baixa o pacote diretamente da fonte pública e extrai `diabetic_data.csv` para `data/raw/`.
 
-### 3.2. Robustez, Validação e Tratamento de Exceções
-- **Tratamento na UI (`app.py`):** Foram adicionados blocos `try/except ValueError` em todas as abas interativas. Situações como amostragem insuficiente ($n \le \text{ddof}$), colunas com variância zero ou seleções nulas agora exibem alertas amigáveis (`st.warning`/`st.error`) com encerramento gracioso via `st.stop()`, evitando a exposição de tracebacks de erro ao usuário final.
-- **Carregamento de Dados Determinístico:** A função de leitura de dados foi otimizada com `@st.cache_data` para evitar acessos repetidos ao disco, aplicando buscas ordenadas e tratamento específico para erros de parse do Pandas.
+## 4. Arquitetura e decisões de implementação
 
-### 3.3. Testes Unitários e Cobertura de Edge Cases
-A suíte de testes em `tests/test_minhastats.py` foi expandida para além do "caminho feliz", cobrindo:
-- Validação de exceções (`pytest.raises`) para listas vazias, listas de tamanho ímpar/par e quantis fora do intervalo $[0, 1]$.
-- Comportamento de exceção para variância zero e entradas com dimensões incompatíveis.
+### 4.1 Núcleo estatístico
 
-### 3.4. Segurança, Gestão de Memória e Boas Práticas
-- **Conformidade LGPD / Segurança de Dados:** Atualização do `.gitignore` para garantir a exclusão de qualquer arquivo de dados reais de saúde (`data/raw/*.csv`), prevenindo a publicação acidental de dados sensíveis em repositórios públicos.
-- **Gestão de Memória no Matplotlib:** Inclusão de `plt.close(fig)` em todas as renderizações de gráficos no Streamlit para evitar vazamento de memória em sessões prolongadas.
-- **Reprodutibilidade:** Pinagem rigorosa de versões das dependências no `requirements.txt`.
+O arquivo `src/minhastats.py` foi desenvolvido em Python puro. As funções fundamentais não delegam os cálculos para NumPy ou SciPy.
 
+São implementados:
 
-## 4. Resultados e Status do Projeto
+- média;
+- mediana;
+- moda;
+- amplitude;
+- variância populacional;
+- variância amostral;
+- desvio padrão populacional;
+- desvio padrão amostral;
+- quartis e percentis;
+- coeficiente de variação;
+- covariância;
+- correlação de Pearson;
+- regressão linear simples por mínimos quadrados.
 
-| Indicador | Status Inicial | Status Pós-Refatoração |
-| :--- | :---: | :---: |
-| **Complexidade da LGN** | $O(n^2)$ | **$O(n)$** |
-| **Tratamento de Exceções na UI** | Inexistente (crashes expostos) | **Robusto (`st.error` / `st.stop`)** |
-| **Cobertura de Testes (`pytest`)** | Caminho feliz apenas | **Edge cases + Exceções tratadas** |
-| **Proteção de Dados (`.gitignore`)** | Desativada (risco LGPD) | **Ativa (`data/raw/*.csv` protegido)** |
-| **Cache de Carregamento de Dados** | Ausente | **Ativo (`@st.cache_data`)** |
+### 4.2 Interface
 
+`app.py` utiliza Streamlit para permitir seleção de variáveis, alteração de parâmetros de simulação, visualização de tabelas e gráficos e interpretação automática.
 
-## 5. Próximos Passos (Trabalhos Futuros)
+### 4.3 Testes
 
-- **Módulo de Regressão Múltipla:** Expandir o núcleo estatístico para suportar mais de uma variável independente.
-- **Exportação de Relatórios:** Permitir a geração automática de resumos executivos em PDF/HTML com os insights gerados na aba interativa.
+A suíte `pytest` compara os cálculos próprios com NumPy/SciPy e cobre casos de borda, como listas vazias, dados insuficientes, tamanhos incompatíveis, quantis inválidos e variância zero.
+
+## 5. Fórmulas utilizadas
+
+### 5.1 Média
+
+$$
+\bar{x}=\frac{1}{n}\sum_{i=1}^{n}x_i
+$$
+
+### 5.2 Variância populacional
+
+$$
+\sigma^2=\frac{1}{n}\sum_{i=1}^{n}(x_i-\bar{x})^2
+$$
+
+### 5.3 Variância amostral
+
+$$
+ s^2=\frac{1}{n-1}\sum_{i=1}^{n}(x_i-\bar{x})^2
+$$
+
+### 5.4 Desvio padrão
+
+$$
+\sigma=\sqrt{\sigma^2}, \qquad s=\sqrt{s^2}
+$$
+
+### 5.5 Amplitude
+
+$$
+A=\max(x)-\min(x)
+$$
+
+### 5.6 Coeficiente de variação
+
+$$
+CV=\frac{s}{|\bar{x}|}\times100
+$$
+
+### 5.7 Covariância amostral
+
+$$
+Cov(X,Y)=\frac{1}{n-1}\sum_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})
+$$
+
+### 5.8 Correlação de Pearson
+
+$$
+r=\frac{Cov(X,Y)}{s_Xs_Y}
+$$
+
+### 5.9 Regressão linear simples
+
+$$
+\hat{Y}=\beta_0+\beta_1X
+$$
+
+com
+
+$$
+\beta_1=\frac{Cov(X,Y)}{Var(X)}
+$$
+
+$$
+\beta_0=\bar{Y}-\beta_1\bar{X}
+$$
+
+$$
+R^2=r^2
+$$
+
+## 6. Validação dos cálculos
+
+Os resultados do núcleo próprio são comparados com implementações consolidadas durante os testes automatizados:
+
+| Função própria | Referência |
+|---|---|
+| Média | `numpy.mean` |
+| Mediana | `numpy.median` |
+| Variância | `numpy.var` |
+| Desvio padrão | `numpy.std` |
+| Percentil | `numpy.percentile` |
+| Covariância | `numpy.cov` |
+| Pearson | `scipy.stats.pearsonr` |
+| Regressão | `scipy.stats.linregress` |
+
+Além da comparação numérica, os testes verificam comportamentos de exceção e casos extremos.
+
+Executar:
+
+```bash
+pytest
+```
+
+## 7. Módulo 0 — Dados
+
+O primeiro módulo apresenta uma amostra do dataset, total de registros, quantidade de variáveis numéricas e categóricas, tipos de dados e quantidade de valores ausentes.
+
+**Evidência a inserir na versão final:** screenshot do Módulo 0 em execução.
+
+## 8. Módulo 2 — Estatística Descritiva Interativa
+
+Para variáveis numéricas, a aplicação apresenta:
+
+- média;
+- mediana;
+- moda;
+- amplitude;
+- variância populacional e amostral;
+- desvio padrão populacional e amostral;
+- quartis;
+- percentil 90;
+- coeficiente de variação;
+- tabela de frequência absoluta e relativa;
+- histograma;
+- boxplot;
+- detecção de outliers pela regra do IQR;
+- interpretação automática da assimetria e da dispersão.
+
+Para variáveis categóricas, apresenta tabela de frequências e gráfico de barras das categorias mais frequentes.
+
+**Evidência a inserir na versão final:** screenshot do módulo mostrando métricas, tabela e gráficos.
+
+## 9. Módulo 3 — Monte Carlo
+
+### 9.1 Lei dos Grandes Números
+
+É simulada uma sequência de lançamentos de um dado justo. A média acumulada é comparada ao valor esperado teórico 3,5. O número de lançamentos e a semente aleatória podem ser alterados pelo usuário.
+
+A média acumulada é calculada de forma vetorizada com `numpy.cumsum`, evitando recomputação quadrática.
+
+### 9.2 Teorema Central do Limite
+
+A aplicação seleciona uma variável numérica do dataset e gera várias amostras com reposição. O histograma das médias amostrais permite observar a tendência de aproximação à distribuição Normal conforme o tamanho da amostra aumenta.
+
+**Evidência a inserir na versão final:** screenshots da LGN e do TCL.
+
+## 10. Módulo 4 — Distribuições Teóricas
+
+São disponibilizadas duas distribuições candidatas:
+
+- Normal;
+- Exponencial.
+
+Os parâmetros da Normal são estimados a partir da média e do desvio padrão do dataset. Para a Exponencial, a escala é estimada pela média, com validação de domínio para impedir ajustes inválidos em dados negativos.
+
+As curvas são sobrepostas ao histograma dos dados reais. A aplicação também apresenta uma interpretação textual da adequação esperada do ajuste.
+
+**Evidência a inserir na versão final:** screenshot dos dois ajustes.
+
+## 11. Módulo 5 — Correlação e Regressão
+
+O usuário seleciona duas variáveis numéricas. O módulo apresenta:
+
+- coeficiente de Pearson;
+- equação da reta de regressão;
+- R²;
+- gráfico de dispersão;
+- reta de mínimos quadrados;
+- campo de predição interativa;
+- interpretação da força da associação;
+- alerta explícito de que correlação não implica causalidade.
+
+**Evidência a inserir na versão final:** screenshot do módulo com equação, R² e gráfico.
+
+## 12. Módulo 6 — Três descobertas estatísticas
+
+O módulo apresenta automaticamente três descobertas sobre a variável selecionada:
+
+### Descoberta 1 — Tendência central
+
+Compara média e mediana e identifica a direção da assimetria observada.
+
+### Descoberta 2 — Dispersão
+
+Relaciona o desvio padrão ao coeficiente de variação para caracterizar a variabilidade relativa.
+
+### Descoberta 3 — Valores extremos
+
+Quantifica os outliers identificados pela regra do IQR e informa sua proporção no conjunto analisado.
+
+### Registro final das descobertas
+
+> **Importante:** antes da entrega, selecionar no aplicativo a variável escolhida para a análise final, registrar os valores exibidos e substituir esta seção por três achados específicos do dataset, com os números e screenshots correspondentes. Não devem ser inventados resultados que não tenham sido observados na execução real.
+
+- **Descoberta final 1:** [PREENCHER com variável, estatística, valor e interpretação]
+- **Descoberta final 2:** [PREENCHER com variável, estatística, valor e interpretação]
+- **Descoberta final 3:** [PREENCHER com variável, estatística, valor e interpretação]
+
+## 13. Conclusão
+
+O laboratório integra programação, estatística e visualização de dados em uma aplicação interativa. A separação entre núcleo matemático, interface e testes permite validar os cálculos próprios independentemente da camada visual e torna o projeto mais fácil de manter e reproduzir.
+
+A etapa final da entrega deve incluir as evidências visuais reais da aplicação, a identificação do aluno e as três descobertas estatísticas observadas na execução do dataset.
+
+## 14. Referências
+
+- UCI Machine Learning Repository. **Diabetes 130-US Hospitals for Years 1999-2008**. https://archive.ics.uci.edu/dataset/296/diabetes+130+us+hospitals+for+years+1999-2008
+- NumPy Documentation. https://numpy.org/doc/
+- SciPy Documentation. https://docs.scipy.org/doc/scipy/
+- Streamlit Documentation. https://docs.streamlit.io/
