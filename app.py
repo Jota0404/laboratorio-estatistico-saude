@@ -199,15 +199,39 @@ with tab2:
             top_counts = counts.head(6).copy()
             if len(counts) > 6:
                 top_counts.loc["Outras"] = counts.iloc[6:].sum()
+            percentages = top_counts / top_counts.sum() * 100
 
             fig_pie, ax_pie = plt.subplots(figsize=(7, 5))
             wedges, _, autotexts = ax_pie.pie(
                 top_counts.values,
-                autopct="%.1f%%",
+                labels=None,
+                autopct=lambda pct: f"{pct:.1f}%" if pct >= 5 else "",
                 startangle=90,
-                pctdistance=0.72,
+                pctdistance=0.68,
                 textprops={"fontsize": 10},
             )
+
+            # Percentuais muito pequenos ficam fora da fatia, com uma seta
+            # apontando diretamente para a porção correspondente.
+            for wedge, pct in zip(wedges, percentages):
+                if pct < 5:
+                    angle = math.radians((wedge.theta1 + wedge.theta2) / 2.0)
+                    x = math.cos(angle)
+                    y = math.sin(angle)
+                    horizontal_alignment = "left" if x >= 0 else "right"
+                    ax_pie.annotate(
+                        f"{pct:.1f}%",
+                        xy=(x * 0.92, y * 0.92),
+                        xytext=(x * 1.32, y * 1.32),
+                        ha=horizontal_alignment,
+                        va="center",
+                        fontsize=9,
+                        arrowprops={
+                            "arrowstyle": "-",
+                            "connectionstyle": "arc3",
+                        },
+                    )
+
             ax_pie.set_title(f"Distribuição das categorias — {cat_var}", pad=14)
             ax_pie.legend(
                 wedges,
@@ -222,7 +246,7 @@ with tab2:
             st.pyplot(fig_pie)
             plt.close(fig_pie)
 
-        st.caption("O gráfico de pizza exibe as seis maiores categorias; as demais são agrupadas em 'Outras'.")
+        st.caption("No gráfico de pizza, percentuais menores que 5% são exibidos externamente com uma seta para facilitar a leitura.")
 
 with tab3:
     st.header("🎲 Simulação de Monte Carlo")
