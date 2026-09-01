@@ -2,9 +2,9 @@
 
 ## 1. Identificação
 
-- **Aluno:** [PREENCHER NOME COMPLETO]
-- **Matrícula:** [PREENCHER MATRÍCULA]
-- **Disciplina:** [PREENCHER]
+- **Aluno:** João Marcos de Barcelos Fernandes
+- **Matrícula:** 72650311
+- **Disciplina:** [Matemática e Estatística para Computação](https://campusonline1.ceub.br/course/view.php?id=2382)
 - **Repositório:** https://github.com/Jota0404/laboratorio-estatistico-saude
 
 ## 2. Objetivo
