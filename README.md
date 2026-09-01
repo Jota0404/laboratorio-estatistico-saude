@@ -4,11 +4,9 @@ Aplicação web interativa desenvolvida em **Python + Streamlit** para análise 
 
 ## 👥 Identificação
 
-> **Preencher antes da entrega:** substituir os campos abaixo pelos dados exigidos pelo professor.
-
-- **Aluno:** [NOME COMPLETO]
-- **Matrícula:** [MATRÍCULA]
-- **Disciplina:** [NOME DA DISCIPLINA]
+- **Aluno:** João Marcos de Barcelos Fernandes
+- **Matrícula:** 72650311
+- **Disciplina:** [Matemática e Estatística para Computação](https://campusonline1.ceub.br/course/view.php?id=2382)
 - **Projeto:** Laboratório Estatístico Interativo
 
 ## 🎯 Objetivo
